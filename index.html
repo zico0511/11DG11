@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>11DG11-客戶管理系統</title>
+  <!-- Favicon 推薦格式（32x32 PNG 或 ICO）-->
+  <link rel="icon" type="image/png" href="favicon.png">
+  <!-- 備用 .ico 版本 -->
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* 分頁導航 */
+        .page-navigation {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 15px;
+        }
+
+        .page-nav-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .page-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .page-nav-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* 頁面內容 */
+        .page-content {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .content-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .content-section h2 {
+            color: #4a5568;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e6fffa;
+        }
+
+        .upload-placeholder i {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+
+        .upload-placeholder p {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 5px;
+        }
+
+        .upload-placeholder span {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .image-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .preview-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 1;
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .status-options {
+            display: flex;
+            gap: 15px;
+        }
+
+        .status-option {
+            cursor: pointer;
+        }
+
+        .status-option input[type="radio"] {
+            display: none;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 25px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .status-indicator.pending {
+            background: #fef5e7;
+            color: #d69e2e;
+        }
+
+        .status-indicator.replied {
+            background: #f0fff4;
+            color: #38a169;
+        }
+
+        .status-option input[type="radio"]:checked + .status-indicator {
+            border-color: currentColor;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 客戶列表樣式 */
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* 搜尋框樣式 */
+        .search-container {
+            flex: 1;
+            max-width: 400px;
+            min-width: 250px;
+        }
+
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            padding: 0 15px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-box i.fa-search {
+            color: #a0aec0;
+            margin-right: 10px;
+            font-size: 0.9rem;
+        }
+
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 12px 0;
+            font-size: 0.95rem;
+            background: transparent;
+            color: #4a5568;
+        }
+
+        .search-box input::placeholder {
+            color: #a0aec0;
+        }
+
+        .clear-search-btn {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            margin-left: 5px;
+        }
+
+        .clear-search-btn:hover {
+            background: #f7fafc;
+            color: #4a5568;
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .customer-list {
+            max-height: 70vh;
+            overflow-y: auto;
+            /* 修正滾輪UI閃爍問題 */
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 transparent;
+        }
+
+        /* 修正滾輪樣式，避免閃爍 */
+        .customer-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .customer-list::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 4px;
+        }
+
+        .customer-list::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+
+        .customer-list::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        .customer-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .customer-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .customer-item.pending {
+            border-left-color: #d69e2e;
+        }
+
+        .customer-item.replied {
+            border-left-color: #38a169;
+        }
+
+        .customer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .customer-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-badge.pending {
+            background: #fef5e7;
+            color: #d69e2e;
+        }
+
+        .status-badge.replied {
+            background: #f0fff4;
+            color: #38a169;
+        }
+
+        .customer-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .customer-image {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .customer-image:hover {
+            transform: scale(1.05);
+        }
+
+        .customer-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .customer-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .toggle-status-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .toggle-status-btn:hover {
+            background: #5a67d8;
+        }
+
+        .delete-btn {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #c53030;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .empty-state p {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .loading-spinner i {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        /* 優化後的圖片檢視模態框 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-image-container {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .modal-image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -50px;
+            right: -10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #333;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+
+        /* 圖片導航箭頭 */
+        .modal-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #333;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+        }
+
+        .modal-nav:hover {
+            background: white;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .modal-nav.prev {
+            left: -70px;
+        }
+
+        .modal-nav.next {
+            right: -70px;
+        }
+
+        .modal-nav:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .modal-nav:disabled:hover {
+            transform: translateY(-50%);
+        }
+
+        /* 圖片計數器 */
+        .modal-counter {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .firebase-config {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .firebase-config h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .firebase-config p {
+            color: #856404;
+            font-size: 0.9rem;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .page-navigation {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .page-nav-btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+
+            .content-section {
+                padding: 20px;
+            }
+
+            .modal-nav.prev {
+                left: -50px;
+            }
+
+            .modal-nav.next {
+                right: -50px;
+            }
+
+            .modal-nav {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .customer-actions {
+                justify-content: center;
+            }
+
+            .search-container {
+                max-width: 100%;
+                min-width: auto;
+                order: -1;
+                width: 100%;
+            }
+
+            .list-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 20px;
+            }
+
+            .filter-options {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-nav.prev {
+                left: 10px;
+            }
+
+            .modal-nav.next {
+                right: 10px;
+            }
+
+            .modal-close {
+                top: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-users"></i> 11DG11-客戶管理系統</h1>
+            <p>管理客戶資料與回復狀態</p>
+        </header>
+
+        <!-- 分頁導航 -->
+        <nav class="page-navigation">
+            <button class="page-nav-btn active" data-page="add-customer">
+                <i class="fas fa-plus-circle"></i> 新增客戶
+            </button>
+            <button class="page-nav-btn" data-page="customer-list">
+                <i class="fas fa-list"></i> 客戶列表
+            </button>
+        </nav>
+
+        <!-- 新增客戶頁面 -->
+        <div id="add-customer" class="page-content active">
+            <section class="content-section">
+                <div class="firebase-config">
+                    <h3><i class="fas fa-cog"></i> Firebase 設定提醒</h3>
+                    <p>請確保已在程式碼中正確設定您的 Firebase 配置資訊</p>
+                </div>
+                
+                <h2><i class="fas fa-plus-circle"></i> 新增客戶</h2>
+                <form id="customerForm" class="customer-form">
+                    <div class="form-group">
+                        <label for="customerName">
+                            <i class="fas fa-user"></i> 客戶姓名
+                        </label>
+                        <input type="text" id="customerName" name="customerName" required placeholder="請輸入客戶姓名">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="imageUpload">
+                            <i class="fas fa-images"></i> 上傳圖片
+                        </label>
+                        <div class="upload-area" id="uploadArea">
+                            <input type="file" id="imageUpload" name="images" multiple accept="image/*" hidden>
+                            <div class="upload-placeholder">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>點擊或拖拽圖片到此處</p>
+                                <span>支援多張圖片上傳</span>
+                            </div>
+                        </div>
+                        <div id="imagePreview" class="image-preview"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-reply"></i> 回復狀態
+                        </label>
+                        <div class="status-options">
+                            <label class="status-option">
+                                <input type="radio" name="replyStatus" value="pending" checked>
+                                <span class="status-indicator pending">
+                                    <i class="fas fa-clock"></i> 未回復
+                                </span>
+                            </label>
+                            <label class="status-option">
+                                <input type="radio" name="replyStatus" value="replied">
+                                <span class="status-indicator replied">
+                                    <i class="fas fa-check"></i> 已回復
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-save"></i> 儲存客戶資料
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <!-- 客戶列表頁面 -->
+        <div id="customer-list" class="page-content">
+            <section class="content-section">
+                <div class="list-header">
+                    <h2><i class="fas fa-list"></i> 客戶列表</h2>
+                    <div class="search-container">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="customerSearch" placeholder="搜尋客戶姓名..." autocomplete="off">
+                            <button type="button" id="clearSearch" class="clear-search-btn" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="filter-options">
+                        <button class="filter-btn active" data-filter="all">
+                            <i class="fas fa-globe"></i> 全部
+                        </button>
+                        <button class="filter-btn" data-filter="pending">
+                            <i class="fas fa-clock"></i> 未回復
+                        </button>
+                        <button class="filter-btn" data-filter="replied">
+                            <i class="fas fa-check"></i> 已回復
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="customerList" class="customer-list">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>尚無客戶資料</p>
+                        <span>請先新增客戶資料</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 載入指示器 -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>處理中...</p>
+        </div>
+    </div>
+
+    <!-- 優化後的圖片檢視模態框 -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeImageModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="modal-nav prev" id="prevImageBtn" onclick="showPrevImage()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="圖片檢視">
+                <div class="modal-counter" id="modalCounter">1 / 1</div>
+            </div>
+            <button class="modal-nav next" id="nextImageBtn" onclick="showNextImage()">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <script>
+        // Firebase 配置 - 請替換為您的實際配置
+const firebaseConfig = {
+  apiKey: "AIzaSyAcuHiKgdqN8lIpqkvNGiwrZhWx_vas2q0",
+  authDomain: "dg11-a10bd.firebaseapp.com",
+  projectId: "dg11-a10bd",
+  storageBucket: "dg11-a10bd.firebasestorage.app",
+  messagingSenderId: "680542712448",
+  appId: "1:680542712448:web:efe545575b4f2e8242ac65"
+};
+
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // 全域變數
+        let selectedFiles = [];
+        let currentFilter = 'all';
+        let currentSearchTerm = '';
+        let currentImageIndex = 0;
+        let currentImageList = [];
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        // DOM 元素
+        const uploadArea = document.getElementById('uploadArea');
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreview = document.getElementById('imagePreview');
+        const customerForm = document.getElementById('customerForm');
+        const customerList = document.getElementById('customerList');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const pageNavBtns = document.querySelectorAll('.page-nav-btn');
+        const pageContents = document.querySelectorAll('.page-content');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalCounter = document.getElementById('modalCounter');
+        const prevImageBtn = document.getElementById('prevImageBtn');
+        const nextImageBtn = document.getElementById('nextImageBtn');
+        const customerSearch = document.getElementById('customerSearch');
+        const clearSearchBtn = document.getElementById('clearSearch');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadCustomers();
+        });
+
+        // 設定事件監聽器
+        function setupEventListeners() {
+            // 分頁導航事件
+            pageNavBtns.forEach(btn => {
+                btn.addEventListener('click', () => switchPage(btn.dataset.page));
+            });
+
+            // 檔案上傳區域事件
+            uploadArea.addEventListener('click', () => imageUpload.click());
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            
+            // 檔案選擇事件
+            imageUpload.addEventListener('change', handleFileSelect);
+            
+            // 表單提交事件
+            customerForm.addEventListener('submit', handleFormSubmit);
+            
+            // 篩選按鈕事件
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    filterCustomers();
+                });
+            });
+
+            // 搜尋功能事件
+            customerSearch.addEventListener('input', handleSearchInput);
+            customerSearch.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    clearSearch();
+                }
+            });
+            clearSearchBtn.addEventListener('click', clearSearch);
+
+            // 圖片模態框觸控事件（支援滑動）
+            imageModal.addEventListener('touchstart', handleTouchStart, { passive: true });
+            imageModal.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+            // 鍵盤事件
+            document.addEventListener('keydown', handleKeyDown);
+
+            // 點擊背景關閉模態框
+            imageModal.addEventListener('click', function(e) {
+                if (e.target === imageModal) {
+                    closeImageModal();
+                }
+            });
+        }
+
+        // 分頁切換
+        function switchPage(pageId) {
+            // 更新導航按鈕狀態
+            pageNavBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.page === pageId) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 切換頁面內容
+            pageContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === pageId) {
+                    content.classList.add('active');
+                }
+            });
+
+            // 如果切換到客戶列表頁面，重新載入資料
+            if (pageId === 'customer-list') {
+                loadCustomers();
+            }
+        }
+
+        // 觸控事件處理（滑動功能）
+        function handleTouchStart(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }
+
+        function handleTouchEnd(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    // 向左滑動 - 下一張
+                    showNextImage();
+                } else {
+                    // 向右滑動 - 上一張
+                    showPrevImage();
+                }
+            }
+        }
+
+        // 鍵盤事件處理
+        function handleKeyDown(e) {
+            if (imageModal.classList.contains('active')) {
+                switch(e.key) {
+                    case 'Escape':
+                        closeImageModal();
+                        break;
+                    case 'ArrowLeft':
+                        showPrevImage();
+                        break;
+                    case 'ArrowRight':
+                        showNextImage();
+                        break;
+                }
+            }
+        }
+
+        // 處理拖拽事件
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            addFiles(files);
+        }
+
+        // 處理檔案選擇
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            addFiles(files);
+        }
+
+        // 新增檔案到選擇列表
+        function addFiles(files) {
+            files.forEach(file => {
+                if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    selectedFiles.push(file);
+                }
+            });
+            updateImagePreview();
+        }
+
+        // 更新圖片預覽
+        function updateImagePreview() {
+            imagePreview.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" alt="預覽圖片">
+                        <button type="button" class="remove-btn" onclick="removeFile(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    imagePreview.appendChild(previewItem);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 移除檔案
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateImagePreview();
+        }
+
+        // 處理表單提交
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const customerName = document.getElementById('customerName').value.trim();
+            const replyStatus = document.querySelector('input[name="replyStatus"]:checked').value;
+            
+            if (!customerName) {
+                alert('請輸入客戶姓名');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                // 上傳圖片到 Firebase Storage
+                const imageUrls = await uploadImages();
+                
+                // 儲存客戶資料到 Firestore
+                await db.collection('customers').add({
+                    name: customerName,
+                    replyStatus: replyStatus,
+                    images: imageUrls,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 重置表單
+                resetForm();
+                
+                alert('客戶資料已成功儲存！');
+                
+                // 自動切換到客戶列表頁面
+                switchPage('customer-list');
+                
+            } catch (error) {
+                console.error('儲存失敗:', error);
+                alert('儲存失敗，請稍後再試');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 上傳圖片到 Firebase Storage
+        async function uploadImages() {
+            const imageUrls = [];
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const fileName = `images/${Date.now()}_${i}_${file.name}`;
+                const storageRef = storage.ref().child(fileName);
+                
+                try {
+                    const snapshot = await storageRef.put(file);
+                    const downloadURL = await snapshot.ref.getDownloadURL();
+                    imageUrls.push(downloadURL);
+                } catch (error) {
+                    console.error('圖片上傳失敗:', error);
+                    throw error;
+                }
+            }
+            
+            return imageUrls;
+        }
+
+        // 重置表單
+        function resetForm() {
+            customerForm.reset();
+            selectedFiles = [];
+            imagePreview.innerHTML = '';
+            document.querySelector('input[name="replyStatus"][value="pending"]').checked = true;
+        }
+
+        // 載入客戶列表
+        async function loadCustomers() {
+            try {
+                const snapshot = await db.collection('customers')
+                    .orderBy('createdAt', 'desc')
+                    .get();
+                
+                const customers = [];
+                snapshot.forEach(doc => {
+                    customers.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                displayCustomers(customers);
+                
+            } catch (error) {
+                console.error('載入客戶資料失敗:', error);
+                customerList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>載入失敗</p>
+                        <span>請檢查 Firebase 設定</span>
+                    </div>
+                `;
+            }
+        }
+
+        // 顯示客戶列表
+        function displayCustomers(customers) {
+            if (customers.length === 0) {
+                customerList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>尚無客戶資料</p>
+                        <span>請先新增客戶資料</span>
+                    </div>
+                `;
+                return;
+            }
+
+            customerList.innerHTML = customers.map(customer => `
+                <div class="customer-item ${customer.replyStatus}" data-status="${customer.replyStatus}">
+                    <div class="customer-header">
+                        <div class="customer-name">${customer.name}</div>
+                        <div class="status-badge ${customer.replyStatus}">
+                            <i class="fas ${customer.replyStatus === 'replied' ? 'fa-check' : 'fa-clock'}"></i>
+                            ${customer.replyStatus === 'replied' ? '已回復' : '未回復'}
+                        </div>
+                    </div>
+                    
+                    ${customer.images && customer.images.length > 0 ? `
+                        <div class="customer-images">
+                            ${customer.images.map((imageUrl, index) => `
+                                <div class="customer-image" onclick="openImageModal(${JSON.stringify(customer.images).replace(/"/g, '&quot;')}, ${index})">
+                                    <img src="${imageUrl}" alt="客戶圖片">
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="customer-actions">
+                        <button class="action-btn toggle-status-btn" onclick="toggleStatus('${customer.id}', '${customer.replyStatus}')">
+                            <i class="fas ${customer.replyStatus === 'replied' ? 'fa-undo' : 'fa-check'}"></i>
+                            ${customer.replyStatus === 'replied' ? '標記未回復' : '標記已回復'}
+                        </button>
+                        <button class="action-btn delete-btn" onclick="deleteCustomer('${customer.id}')">
+                            <i class="fas fa-trash"></i> 刪除
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            filterCustomers();
+        }
+
+        // 處理搜尋輸入
+        function handleSearchInput(e) {
+            currentSearchTerm = e.target.value.trim().toLowerCase();
+            
+            // 顯示或隱藏清除按鈕
+            if (currentSearchTerm) {
+                clearSearchBtn.style.display = 'flex';
+            } else {
+                clearSearchBtn.style.display = 'none';
+            }
+            
+            filterCustomers();
+        }
+
+        // 清除搜尋
+        function clearSearch() {
+            customerSearch.value = '';
+            currentSearchTerm = '';
+            clearSearchBtn.style.display = 'none';
+            filterCustomers();
+            customerSearch.focus();
+        }
+
+        // 篩選客戶（支援搜尋和狀態篩選）
+        function filterCustomers() {
+            const customerItems = document.querySelectorAll('.customer-item');
+            let visibleCount = 0;
+            
+            customerItems.forEach(item => {
+                const status = item.dataset.status;
+                const customerName = item.querySelector('.customer-name').textContent.toLowerCase();
+                
+                // 檢查狀態篩選
+                const statusMatch = currentFilter === 'all' || status === currentFilter;
+                
+                // 檢查搜尋條件
+                const searchMatch = !currentSearchTerm || customerName.includes(currentSearchTerm);
+                
+                // 同時滿足狀態篩選和搜尋條件才顯示
+                if (statusMatch && searchMatch) {
+                    item.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // 如果沒有符合條件的客戶，顯示空狀態訊息
+            updateEmptyState(visibleCount);
+        }
+
+        // 更新空狀態顯示
+        function updateEmptyState(visibleCount) {
+            const existingEmptyState = customerList.querySelector('.empty-state');
+            const hasCustomerItems = document.querySelectorAll('.customer-item').length > 0;
+            
+            if (visibleCount === 0 && hasCustomerItems) {
+                // 有客戶資料但沒有符合篩選條件的
+                if (!existingEmptyState) {
+                    const emptyStateDiv = document.createElement('div');
+                    emptyStateDiv.className = 'empty-state search-empty';
+                    emptyStateDiv.innerHTML = `
+                        <i class="fas fa-search"></i>
+                        <p>找不到符合條件的客戶</p>
+                        <span>請嘗試調整搜尋關鍵字或篩選條件</span>
+                    `;
+                    customerList.appendChild(emptyStateDiv);
+                }
+            } else {
+                // 移除搜尋空狀態
+                const searchEmpty = customerList.querySelector('.search-empty');
+                if (searchEmpty) {
+                    searchEmpty.remove();
+                }
+            }
+        }
+
+        // 切換回復狀態
+        async function toggleStatus(customerId, currentStatus) {
+            const newStatus = currentStatus === 'replied' ? 'pending' : 'replied';
+            
+            try {
+                showLoading(true);
+                
+                await db.collection('customers').doc(customerId).update({
+                    replyStatus: newStatus,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                await loadCustomers();
+                
+            } catch (error) {
+                console.error('更新狀態失敗:', error);
+                alert('更新失敗，請稍後再試');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 刪除客戶
+        async function deleteCustomer(customerId) {
+            if (!confirm('確定要刪除這筆客戶資料嗎？此操作無法復原。')) {
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                // 取得客戶資料以刪除相關圖片
+                const doc = await db.collection('customers').doc(customerId).get();
+                const customerData = doc.data();
+                
+                // 刪除 Storage 中的圖片
+                if (customerData.images && customerData.images.length > 0) {
+                    for (const imageUrl of customerData.images) {
+                        try {
+                            const imageRef = storage.refFromURL(imageUrl);
+                            await imageRef.delete();
+                        } catch (error) {
+                            console.warn('刪除圖片失敗:', error);
+                        }
+                    }
+                }
+                
+                // 刪除 Firestore 文件
+                await db.collection('customers').doc(customerId).delete();
+                
+                await loadCustomers();
+                
+            } catch (error) {
+                console.error('刪除失敗:', error);
+                alert('刪除失敗，請稍後再試');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 開啟圖片檢視模態框（支援多圖片導航）
+        function openImageModal(imageUrls, startIndex = 0) {
+            currentImageList = imageUrls;
+            currentImageIndex = startIndex;
+            
+            updateModalImage();
+            imageModal.classList.add('active');
+        }
+
+        // 更新模態框中的圖片
+        function updateModalImage() {
+            if (currentImageList.length === 0) return;
+            
+            modalImage.src = currentImageList[currentImageIndex];
+            modalCounter.textContent = `${currentImageIndex + 1} / ${currentImageList.length}`;
+            
+            // 更新導航按鈕狀態
+            prevImageBtn.disabled = currentImageIndex === 0;
+            nextImageBtn.disabled = currentImageIndex === currentImageList.length - 1;
+            
+            // 如果只有一張圖片，隱藏導航按鈕
+            if (currentImageList.length === 1) {
+                prevImageBtn.style.display = 'none';
+                nextImageBtn.style.display = 'none';
+            } else {
+                prevImageBtn.style.display = 'flex';
+                nextImageBtn.style.display = 'flex';
+            }
+        }
+
+        // 顯示上一張圖片
+        function showPrevImage() {
+            if (currentImageIndex > 0) {
+                currentImageIndex--;
+                updateModalImage();
+            }
+        }
+
+        // 顯示下一張圖片
+        function showNextImage() {
+            if (currentImageIndex < currentImageList.length - 1) {
+                currentImageIndex++;
+                updateModalImage();
+            }
+        }
+
+        // 關閉圖片檢視模態框
+        function closeImageModal() {
+            imageModal.classList.remove('active');
+            currentImageList = [];
+            currentImageIndex = 0;
+        }
+
+        // 顯示/隱藏載入指示器
+        function showLoading(show) {
+            if (show) {
+                loadingOverlay.classList.remove('hidden');
+            } else {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
+
