@@ -159,6 +159,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             background: #f7fafc;
+            position: relative;
         }
 
         .upload-area:hover {
@@ -169,6 +170,33 @@
         .upload-area.dragover {
             border-color: #667eea;
             background: #e6fffa;
+        }
+
+        .upload-area.paste-active {
+            border-color: #38a169;
+            background: #f0fff4;
+            animation: pasteHighlight 0.5s ease;
+        }
+
+        @keyframes pasteHighlight {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .paste-hint {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(56, 161, 105, 0.1);
+            color: #38a169;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .upload-placeholder i {
@@ -727,6 +755,32 @@
             font-size: 0.9rem;
         }
 
+        /* 通知樣式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #38a169;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1002;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: #e53e3e;
+        }
+
         /* 響應式設計 */
         @media (max-width: 768px) {
             .container {
@@ -842,11 +896,15 @@
                             <i class="fas fa-images"></i> 上傳圖片
                         </label>
                         <div class="upload-area" id="uploadArea">
+                            <div class="paste-hint">
+                                <i class="fas fa-clipboard"></i>
+                                支援 Ctrl+V 貼上
+                            </div>
                             <input type="file" id="imageUpload" name="images" multiple accept="image/*" hidden>
                             <div class="upload-placeholder">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <p>點擊或拖拽圖片到此處</p>
-                                <span>支援多張圖片上傳</span>
+                                <span>支援多張圖片上傳，也可以直接 Ctrl+V 貼上圖片</span>
                             </div>
                         </div>
                         <div id="imagePreview" class="image-preview"></div>
@@ -944,6 +1002,12 @@
         </div>
     </div>
 
+    <!-- 通知 -->
+    <div class="notification" id="notification">
+        <i class="fas fa-check"></i>
+        <span id="notification-text"></span>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -991,12 +1055,83 @@ const firebaseConfig = {
         const nextImageBtn = document.getElementById('nextImageBtn');
         const customerSearch = document.getElementById('customerSearch');
         const clearSearchBtn = document.getElementById('clearSearch');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notification-text');
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
             loadCustomers();
+            
+            // 添加全域複製貼上事件監聽器
+            document.addEventListener('paste', handlePaste);
+            
+            // 添加鍵盤快捷鍵提示
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'v') {
+                    // 如果在新增客戶頁面，高亮上傳區域
+                    if (document.getElementById('add-customer').classList.contains('active')) {
+                        uploadArea.classList.add('paste-active');
+                        setTimeout(() => {
+                            uploadArea.classList.remove('paste-active');
+                        }, 500);
+                    }
+                }
+            });
         });
+
+        // 處理複製貼上事件
+        function handlePaste(event) {
+            // 只在新增客戶頁面處理貼上事件
+            if (!document.getElementById('add-customer').classList.contains('active')) {
+                return;
+            }
+
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            let imageCount = 0;
+            let processedImages = 0;
+
+            // 先計算有多少張圖片
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    imageCount++;
+                }
+            }
+
+            if (imageCount === 0) {
+                return;
+            }
+
+            event.preventDefault();
+
+            // 處理所有圖片
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        // 添加到選擇的文件列表
+                        selectedFiles.push(file);
+                        
+                        // 創建預覽
+                        createImagePreview(file);
+                        
+                        processedImages++;
+                    }
+                }
+            }
+
+            if (processedImages > 0) {
+                // 更新上傳區域狀態
+                updateUploadAreaState();
+                
+                // 顯示成功通知
+                if (processedImages === 1) {
+                    showNotification('圖片已成功貼上！', 'success');
+                } else {
+                    showNotification(`成功貼上 ${processedImages} 張圖片！`, 'success');
+                }
+            }
+        }
 
         // 設定事件監聽器
         function setupEventListeners() {
@@ -1091,10 +1226,10 @@ const firebaseConfig = {
 
             if (Math.abs(diff) > swipeThreshold) {
                 if (diff > 0) {
-                    // 向左滑動 - 下一張
+                    // 向左滑動，顯示下一張
                     showNextImage();
                 } else {
-                    // 向右滑動 - 上一張
+                    // 向右滑動，顯示上一張
                     showPrevImage();
                 }
             }
@@ -1117,7 +1252,7 @@ const firebaseConfig = {
             }
         }
 
-        // 處理拖拽事件
+        // 拖拽處理
         function handleDragOver(e) {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -1131,67 +1266,102 @@ const firebaseConfig = {
         function handleDrop(e) {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-            addFiles(files);
+            
+            const files = Array.from(e.dataTransfer.files);
+            processFiles(files);
         }
 
-        // 處理檔案選擇
+        // 檔案選擇處理
         function handleFileSelect(e) {
             const files = Array.from(e.target.files);
-            addFiles(files);
+            processFiles(files);
         }
 
-        // 新增檔案到選擇列表
-        function addFiles(files) {
-            files.forEach(file => {
-                if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
-                    selectedFiles.push(file);
-                }
+        // 處理檔案
+        function processFiles(files) {
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            
+            if (imageFiles.length === 0) {
+                showNotification('請選擇圖片檔案！', 'error');
+                return;
+            }
+
+            imageFiles.forEach(file => {
+                selectedFiles.push(file);
+                createImagePreview(file);
             });
+
+            updateUploadAreaState();
+            showNotification(`成功添加 ${imageFiles.length} 張圖片！`, 'success');
+        }
+
+        // 創建圖片預覽
+        function createImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                previewItem.innerHTML = `
+                    <img src="${e.target.result}" alt="預覽圖片" onclick="openImageModal(['${e.target.result}'], 0)">
+                    <button class="remove-btn" onclick="removeImage(${selectedFiles.length - 1})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                imagePreview.appendChild(previewItem);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 移除圖片
+        function removeImage(index) {
+            selectedFiles.splice(index, 1);
             updateImagePreview();
+            updateUploadAreaState();
+            showNotification('圖片已移除！', 'success');
         }
 
         // 更新圖片預覽
         function updateImagePreview() {
             imagePreview.innerHTML = '';
             selectedFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const previewItem = document.createElement('div');
-                    previewItem.className = 'preview-item';
-                    previewItem.innerHTML = `
-                        <img src="${e.target.result}" alt="預覽圖片">
-                        <button type="button" class="remove-btn" onclick="removeFile(${index})">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    `;
-                    imagePreview.appendChild(previewItem);
-                };
-                reader.readAsDataURL(file);
+                createImagePreview(file);
             });
         }
 
-        // 移除檔案
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            updateImagePreview();
+        // 更新上傳區域狀態
+        function updateUploadAreaState() {
+            const placeholder = uploadArea.querySelector('.upload-placeholder');
+            if (selectedFiles.length > 0) {
+                placeholder.innerHTML = `
+                    <i class="fas fa-images"></i>
+                    <p>已選擇 ${selectedFiles.length} 張圖片</p>
+                    <span>點擊可繼續添加圖片，或使用 Ctrl+V 貼上更多圖片</span>
+                `;
+            } else {
+                placeholder.innerHTML = `
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>點擊或拖拽圖片到此處</p>
+                    <span>支援多張圖片上傳，也可以直接 Ctrl+V 貼上圖片</span>
+                `;
+            }
         }
 
-        // 處理表單提交
+        // 表單提交處理
         async function handleFormSubmit(e) {
             e.preventDefault();
             
-            const customerName = document.getElementById('customerName').value.trim();
-            const replyStatus = document.querySelector('input[name="replyStatus"]:checked').value;
-            
+            const formData = new FormData(e.target);
+            const customerName = formData.get('customerName').trim();
+            const replyStatus = formData.get('replyStatus');
+
             if (!customerName) {
-                alert('請輸入客戶姓名');
+                showNotification('請輸入客戶姓名！', 'error');
                 return;
             }
 
-            showLoading(true);
-
             try {
+                showLoading(true);
+                
                 // 上傳圖片到 Firebase Storage
                 const imageUrls = await uploadImages();
                 
@@ -1207,14 +1377,14 @@ const firebaseConfig = {
                 // 重置表單
                 resetForm();
                 
-                alert('客戶資料已成功儲存！');
+                showNotification('客戶資料已成功儲存！', 'success');
                 
                 // 自動切換到客戶列表頁面
                 switchPage('customer-list');
                 
             } catch (error) {
                 console.error('儲存失敗:', error);
-                alert('儲存失敗，請稍後再試');
+                showNotification('儲存失敗，請稍後再試', 'error');
             } finally {
                 showLoading(false);
             }
@@ -1248,6 +1418,7 @@ const firebaseConfig = {
             selectedFiles = [];
             imagePreview.innerHTML = '';
             document.querySelector('input[name="replyStatus"][value="pending"]').checked = true;
+            updateUploadAreaState();
         }
 
         // 載入客戶列表
@@ -1417,10 +1588,11 @@ const firebaseConfig = {
                 });
                 
                 await loadCustomers();
+                showNotification('狀態已更新！', 'success');
                 
             } catch (error) {
                 console.error('更新狀態失敗:', error);
-                alert('更新失敗，請稍後再試');
+                showNotification('更新失敗，請稍後再試', 'error');
             } finally {
                 showLoading(false);
             }
@@ -1455,10 +1627,11 @@ const firebaseConfig = {
                 await db.collection('customers').doc(customerId).delete();
                 
                 await loadCustomers();
+                showNotification('客戶已刪除！', 'success');
                 
             } catch (error) {
                 console.error('刪除失敗:', error);
-                alert('刪除失敗，請稍後再試');
+                showNotification('刪除失敗，請稍後再試', 'error');
             } finally {
                 showLoading(false);
             }
@@ -1524,6 +1697,17 @@ const firebaseConfig = {
             } else {
                 loadingOverlay.classList.add('hidden');
             }
+        }
+
+        // 顯示通知
+        function showNotification(message, type = 'success') {
+            notificationText.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
     </script>
 </body>
